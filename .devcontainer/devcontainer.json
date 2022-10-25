@@ -1,0 +1,15 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/docker-existing-dockerfile
+{
+	"name": "rust-tcp",
+	"context": "..",
+	"dockerFile": "../Dockerfile",
+	// "forwardPorts": [],
+	// "postCreateCommand": "apt-get update && apt-get install -y curl",
+	"runArgs": [
+		"--name=rust-tcp",
+		"--privileged"
+	]
+	// "mounts": [ "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind" ],
+	// "remoteUser": "vscode"
+}
