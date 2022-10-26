@@ -100,6 +100,7 @@ impl TCP {
                 Ok((p, r)) => (p, r),
                 Err(_) => continue,
             };
+            // 受信したパケットの送信元から見た宛先は、自身のアドレスとなる
             let local_addr = packet.get_destination();
             let tcp_packet = match TcpPacket::new(packet.payload()) {
                 Some(p) => p,
