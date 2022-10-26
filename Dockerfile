@@ -9,6 +9,9 @@ RUN apt update -y && apt install -y \
 	tcpdump \
 	ethtool
 
+RUN apt install -y --allow-change-held-packages tshark
+RUN rustup component add rustfmt
+
 WORKDIR /opt
 
 COPY ./ ./
