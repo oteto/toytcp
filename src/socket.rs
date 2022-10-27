@@ -50,6 +50,10 @@ pub struct Socket {
     pub send_param: SendParam,
     pub recv_param: RecvParam,
     pub status: TcpStatus,
+    /// 接続済みソケットを保持するキュー、リスニングソケットでのみ使用
+    pub connected_connection_queue: VecDeque<SockID>,
+    /// 生成元のリスニングソケット、接続済みソケットでのみ使用
+    pub listening_socket: Option<SockID>,
     pub sender: TransportSender,
 }
 
@@ -121,6 +125,8 @@ impl Socket {
                 tail: 0,
             },
             status,
+            connected_connection_queue: VecDeque::new(),
+            listening_socket: None,
             sender,
         })
     }

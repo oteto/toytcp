@@ -59,6 +59,35 @@ impl TCP {
         tcp
     }
 
+    /// リスニングそっケットを生成してそのIDを返す
+    pub fn listen(&self, local_addr: Ipv4Addr, local_port: u16) -> Result<SockID> {
+        let socket = Socket::new(
+            local_addr,
+            UNDETERMINED_IP_ADDR, // 接続先IPアドレスは未定
+            local_port,
+            UNDETERMINED_PORT, // 接続先ポートは未定
+            TcpStatus::Listen,
+        )?;
+
+        let mut lock = self.sockets.write().unwrap();
+        let sock_id = socket.get_sock_id();
+        lock.insert(sock_id, socket);
+        Ok(sock_id)
+    }
+
+    /// 接続済みソケットが生成されるまで待機し、生成されたのちそのIDを返す
+    pub fn accept(&self, sock_id: SockID) -> Result<SockID> {
+        self.wait_event(sock_id, TCPEventKind::ConnectionComplated);
+
+        let mut table = self.sockets.write().unwrap();
+        Ok(table
+            .get_mut(&sock_id)
+            .context(format!("no such socket:  {:?}", sock_id))?
+            .connected_connection_queue
+            .pop_front()
+            .context("no connected socket")?)
+    }
+
     /// 指定したソケットIDと種別のイベントを待機
     fn wait_event(&self, sock_id: SockID, kind: TCPEventKind) {
         let (lock, cvar) = &self.event_condvar;
@@ -138,6 +167,8 @@ impl TCP {
 
             let sock_id = socket.get_sock_id();
             if let Err(error) = match socket.status {
+                TcpStatus::Listen => self.listen_handler(table, sock_id, &packet, remote_addr),
+                TcpStatus::SynRcvd => self.synrcvd_handler(table, sock_id, &packet),
                 TcpStatus::SynSent => self.synsent_handler(socket, &packet),
                 _ => {
                     dbg!("not implemented state");
@@ -157,11 +188,14 @@ impl TCP {
         let ack = packet.get_ack();
         let seq = packet.get_seq();
 
-        if flag & tcpflags::ACK > 0 // ACK フラグが立っているか
-            && flag & tcpflags::SYN > 0 // SYN フラグが立っているか
-            && socket.send_param.unacked_seq <= ack // すでに確認応答されたシーケンス番号に対応する確認応答が二重に届いていないか
-            && ack <= socket.send_param.next // まだ送信していないセグメントに対する確認応答が届いていないか
-            && true
+        // ACK フラグが立っているか
+        // && SYN フラグが立っているか
+        // && すでに確認応答されたシーケンス番号に対応する確認応答が二重に届いていないか
+        // && まだ送信していないセグメントに対する確認応答が届いていないか
+        if flag & tcpflags::ACK > 0
+            && flag & tcpflags::SYN > 0
+            && socket.send_param.unacked_seq <= ack
+            && ack <= socket.send_param.next
         {
             socket.recv_param.next = seq + 1;
             socket.recv_param.initial_seq = seq;
