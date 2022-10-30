@@ -42,6 +42,23 @@ pub struct RecvParam {
     pub tail: u32,
 }
 
+#[derive(Debug, Clone)]
+pub struct RetransmissionQueryEntry {
+    pub packet: TCPPacket,
+    pub latest_transmission_time: SystemTime,
+    pub transmission_count: u8,
+}
+
+impl RetransmissionQueryEntry {
+    fn new(packet: TCPPacket) -> Self {
+        Self {
+            packet,
+            latest_transmission_time: SystemTime::now(),
+            transmission_count: 1,
+        }
+    }
+}
+
 pub struct Socket {
     pub local_addr: Ipv4Addr,
     pub remote_addr: Ipv4Addr,
@@ -50,6 +67,8 @@ pub struct Socket {
     pub send_param: SendParam,
     pub recv_param: RecvParam,
     pub status: TcpStatus,
+    /// セグメントが消失した時のためのセグメント保管キュー
+    pub retransmission_queue: VecDeque<RetransmissionQueryEntry>,
     /// 接続済みソケットを保持するキュー、リスニングソケットでのみ使用
     pub connected_connection_queue: VecDeque<SockID>,
     /// 生成元のリスニングソケット、接続済みソケットでのみ使用
@@ -125,6 +144,7 @@ impl Socket {
                 tail: 0,
             },
             status,
+            retransmission_queue: VecDeque::new(),
             connected_connection_queue: VecDeque::new(),
             listening_socket: None,
             sender,
@@ -161,6 +181,16 @@ impl Socket {
             .context(format!("failed to send: \n{:?}", tcp_packet))?;
 
         dbg!("sent", &tcp_packet);
+
+        // 確認応答は再送対象ではない
+        // 確認応答のための確認応答...のループになってしまうため
+        if payload.is_empty() && tcp_packet.get_flag() == tcpflags::ACK {
+            return Ok(send_size);
+        }
+
+        // 再送時用のキューにペイロードを格納
+        self.retransmission_queue
+            .push_back(RetransmissionQueryEntry::new(tcp_packet));
         Ok(send_size)
     }
 
