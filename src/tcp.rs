@@ -1,5 +1,5 @@
 use crate::packet::TCPPacket;
-use crate::socket::{self, SockID, Socket, TcpStatus};
+use crate::socket::{SockID, Socket, TcpStatus};
 use crate::tcpflags;
 use anyhow::{Context, Result};
 use pnet::packet::{ip::IpNextHeaderProtocols, tcp::TcpPacket, Packet};
