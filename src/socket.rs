@@ -67,6 +67,8 @@ pub struct Socket {
     pub send_param: SendParam,
     pub recv_param: RecvParam,
     pub status: TcpStatus,
+    /// 組み立てた受信データを保管するバッファ
+    pub recv_buffer: Vec<u8>,
     /// セグメントが消失した時のためのセグメント保管キュー
     pub retransmission_queue: VecDeque<RetransmissionQueryEntry>,
     /// 接続済みソケットを保持するキュー、リスニングソケットでのみ使用
@@ -144,6 +146,7 @@ impl Socket {
                 tail: 0,
             },
             status,
+            recv_buffer: vec![0; SOCKET_BUFFER_SIZE],
             retransmission_queue: VecDeque::new(),
             connected_connection_queue: VecDeque::new(),
             listening_socket: None,
