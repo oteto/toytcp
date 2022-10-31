@@ -22,7 +22,7 @@ pub struct SockID(pub Ipv4Addr, pub Ipv4Addr, pub u16, pub u16);
 pub struct SendParam {
     /// 送信後まだ ack されていない seq の先頭
     pub unacked_seq: u32,
-    /// 次の送信
+    /// 次の送信 seq
     pub next: u32,
     /// 送信ウィンドウサイズ
     pub window: u16,
@@ -154,6 +154,7 @@ impl Socket {
         })
     }
 
+    /// パケットを送信する
     pub fn send_tcp_packet(
         &mut self,
         seq: u32,

@@ -68,7 +68,7 @@ impl TCP {
         tcp
     }
 
-    /// リスニングそっケットを生成してそのIDを返す
+    /// リスニングソケットを生成してそのIDを返す
     pub fn listen(&self, local_addr: Ipv4Addr, local_port: u16) -> Result<SockID> {
         let socket = Socket::new(
             local_addr,
@@ -97,6 +97,7 @@ impl TCP {
             .context("no connected socket")?)
     }
 
+    /// ソケットを生成し、接続要求を行う。
     pub fn connect(&self, addr: Ipv4Addr, port: u16) -> Result<SockID> {
         let mut rng = rand::thread_rng();
         let mut socket = Socket::new(
@@ -405,7 +406,10 @@ impl TCP {
 
             if let Some(id) = socket.listening_socket {
                 let ls = table.get_mut(&id).unwrap();
+                // 接続済みのソケットをキューに格納して
                 ls.connected_connection_queue.push_back(sock_id);
+                // ここで accept される。
+                // accept 時にここで接続したソケットが取得される
                 self.publish_event(ls.get_sock_id(), TCPEventKind::ConnectionComplated);
             }
         }
